@@ -178,6 +178,7 @@ const parseReviewFromResponseBody = (responseBody, reviewsTranslation) => {
  * }} options
  */
 module.exports.extractPageData = async ({ page, jsonData }) => {
+    let source = await page.content();
     const jsonResult = parseJsonResult(jsonData, false);
     return page.evaluate((placeTitleSel, addressParsed) => {
         const address = $('[data-section-id="ad"] .section-info-line').text().trim();
@@ -197,7 +198,12 @@ module.exports.extractPageData = async ({ page, jsonData }) => {
         if (altOpeningHoursText === 'Temporarily closed') temporarilyClosed = true;
         else if (altOpeningHoursText === 'Permanently closed') permanentlyClosed = true;
 
+        const regex = /\/[g]\/[a-z0-9]+/m;
+        const mreid_matches = source.match(regex);
+        console.log(source);
+        
         return {
+            mreid: mreid_matches ? mreid_matches[0] : null,
             title: $(placeTitleSel).text().trim(),
             subTitle: $('section-hero-header-title-subtitle').first().text().trim() || null,
             // Getting from JSON now
