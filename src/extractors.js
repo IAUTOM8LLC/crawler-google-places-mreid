@@ -2,7 +2,7 @@
 const Apify = require('apify');
 const Puppeteer = require('puppeteer'); // eslint-disable-line
 
-const { Review, PersonalDataOptions, PlacePaginationData } = require('./typedefs');
+const {Review, PersonalDataOptions, PlacePaginationData} = require('./typedefs');
 
 const { PLACE_TITLE_SEL } = require('./consts');
 const { waitForGoogleMapLoader, fixFloatNumber, enlargeImageUrls, navigateBack } = require('./utils');
@@ -14,25 +14,27 @@ const { log, sleep } = Apify.utils;
  * TODO: There is much of this data in the JSON
  * @param {any} placeData
  * @param {boolean} isAdvertisement
- */
+*/
 const parseJsonResult = (placeData, isAdvertisement) => {
     if (!placeData) {
         return;
     }
     // Some places don't have any address
-    const addressDetail = placeData[183] ? .[1];
+    const addressDetail = placeData[183]?.[1];
     const addressParsed = {
-        neighborhood: addressDetail ? .[1],
-        street: addressDetail ? .[2],
-        city: addressDetail ? .[3],
-        postalCode: addressDetail ? .[4],
-        state: addressDetail ? .[5],
-        countryCode: addressDetail ? .[6],
+        neighborhood: addressDetail?.[1],
+        street: addressDetail?.[2],
+        city: addressDetail?.[3],
+        postalCode: addressDetail?.[4],
+        state: addressDetail?.[5],
+        countryCode: addressDetail?.[6],
     };
 
     const coordsArr = placeData[9];
     // TODO: Very rarely place[9] is empty, figure out why
-    const coords = coordsArr ? { lat: fixFloatNumber(coordsArr[2]), lng: fixFloatNumber(coordsArr[3]) } : { lat: null, lng: null };
+    const coords = coordsArr
+        ? { lat: fixFloatNumber(coordsArr[2]), lng: fixFloatNumber(coordsArr[3]) }
+        : { lat: null, lng: null };
 
     return {
         placeId: placeData[78],
@@ -48,7 +50,7 @@ const parseJsonResult = (placeData, isAdvertisement) => {
  * @param {Buffer} responseBodyBuffer
  * @return {PlacePaginationData[]}
  */
-module.exports.parseSearchPlacesResponseBody = (responseBodyBuffer) => {
+ module.exports.parseSearchPlacesResponseBody = (responseBodyBuffer) => {
     /** @type {PlacePaginationData[]} */
     const placePaginationData = [];
     const jsonString = responseBodyBuffer
@@ -60,7 +62,7 @@ module.exports.parseSearchPlacesResponseBody = (responseBodyBuffer) => {
     // We are paring ads but seems Google is not showing them to the scraper right now
     const ads = (data[2] && data[2][1] && data[2][1][0]) || [];
 
-    ads.forEach(( /** @type {any} */ ad) => {
+    ads.forEach((/** @type {any} */ ad) => {
         const placeData = parseJsonResult(ad[15], true);
         if (placeData) {
             placePaginationData.push(placeData);
@@ -76,7 +78,7 @@ module.exports.parseSearchPlacesResponseBody = (responseBodyBuffer) => {
     if (organicResults.length > 1) {
         organicResults = organicResults.slice(1)
     }
-    organicResults.forEach(( /** @type {any} */ result) => {
+    organicResults.forEach((/** @type {any} */ result ) => {
         const placeData = parseJsonResult(result[14], false);
         if (placeData) {
             placePaginationData.push(placeData);
@@ -93,7 +95,7 @@ module.exports.parseSearchPlacesResponseBody = (responseBodyBuffer) => {
  * @param {string} reviewsTranslation
  * @return {Review}
  */
-const parseReviewFromJson = (jsonArray, reviewsTranslation) => {
+ const parseReviewFromJson = (jsonArray, reviewsTranslation) => {
     let text = jsonArray[3];
 
     // Optionally remove translation
@@ -127,8 +129,9 @@ const parseReviewFromJson = (jsonArray, reviewsTranslation) => {
         stars: jsonArray[4] || null,
         // Trip advisor
         rating: jsonArray[25] ? jsonArray[25][1] : null,
-        responseFromOwnerDate: jsonArray[9] && jsonArray[9][3] ?
-            new Date(jsonArray[9][3]).toISOString() : null,
+        responseFromOwnerDate: jsonArray[9] && jsonArray[9][3]
+            ? new Date(jsonArray[9][3]).toISOString()
+            : null,
         responseFromOwnerText: jsonArray[9] ? jsonArray[9][1] : null,
     };
 }
@@ -148,9 +151,9 @@ const stringifyGoogleXrhResponse = (googleResponseString) => {
 const parseReviewFromResponseBody = (responseBody, reviewsTranslation) => {
     /** @type {Review[]} */
     const currentReviews = [];
-    const stringBody = typeof responseBody === 'string' ?
-        responseBody :
-        responseBody.toString('utf-8');
+    const stringBody = typeof responseBody === 'string'
+        ? responseBody
+        : responseBody.toString('utf-8');
     let results;
     try {
         results = stringifyGoogleXrhResponse(stringBody);
@@ -160,7 +163,7 @@ const parseReviewFromResponseBody = (responseBody, reviewsTranslation) => {
     if (!results || !results[2]) {
         return { currentReviews };
     }
-    results[2].forEach(( /** @type {any} */ jsonArray) => {
+    results[2].forEach((/** @type {any} */ jsonArray) => {
         const review = parseReviewFromJson(jsonArray, reviewsTranslation);
         currentReviews.push(review);
     });
@@ -174,10 +177,9 @@ const parseReviewFromResponseBody = (responseBody, reviewsTranslation) => {
  *    jsonData: any,
  * }} options
  */
-module.exports.extractPageData = async({ page, jsonData }) => {
+module.exports.extractPageData = async ({ page, jsonData }) => {
+    console.log('page===========', page, jsonData)
     const jsonResult = parseJsonResult(jsonData, false);
-    console.log('page===============', jsonResult);
-
     return page.evaluate((placeTitleSel, addressParsed) => {
         const address = $('[data-section-id="ad"] .section-info-line').text().trim();
         const addressAlt = $("button[data-tooltip*='address']").text().trim();
@@ -187,17 +189,15 @@ module.exports.extractPageData = async({ page, jsonData }) => {
         const secondaryAddressLineAlt2 = $("button[data-item-id*='locatedin']").text().replace('Located in:', '').trim();
         const phone = $('[data-section-id="pn0"].section-info-speak-numeral').length
             // @ts-ignore
-            ?
-            $('[data-section-id="pn0"].section-info-speak-numeral').attr('data-href').replace('tel:', '') :
-            $("button[data-tooltip*='phone']").text().trim();
+            ? $('[data-section-id="pn0"].section-info-speak-numeral').attr('data-href').replace('tel:', '')
+            : $("button[data-tooltip*='phone']").text().trim();
         const phoneAlt = $('button[data-item-id*=phone]').text().trim();
         let temporarilyClosed = false;
         let permanentlyClosed = false;
         const altOpeningHoursText = $('[class*="section-info-hour-text"] [class*="section-info-text"]').text().trim();
         if (altOpeningHoursText === 'Temporarily closed') temporarilyClosed = true;
         else if (altOpeningHoursText === 'Permanently closed') permanentlyClosed = true;
-
-
+        
 
         return {
             title: $(placeTitleSel).text().trim(),
@@ -208,17 +208,18 @@ module.exports.extractPageData = async({ page, jsonData }) => {
             address: address || addressAlt || addressAlt2 || null,
             locatedIn: secondaryAddressLine || secondaryAddressLineAlt || secondaryAddressLineAlt2 || null,
             ...addressParsed,
-            plusCode: $('[data-section-id="ol"] .widget-pane-link').text().trim() ||
-                $("button[data-tooltip*='plus code']").text().trim() ||
-                $("button[data-item-id*='oloc']").text().trim() || null,
-            website: $('[data-section-id="ap"]').length ?
-                $('[data-section-id="ap"]').eq(0).text().trim() : $("button[data-tooltip*='website']").text().trim() ||
-                $("button[data-item-id*='authority']").text().trim() || null,
+            plusCode: $('[data-section-id="ol"] .widget-pane-link').text().trim()
+                || $("button[data-tooltip*='plus code']").text().trim()
+                || $("button[data-item-id*='oloc']").text().trim() || null,
+            website: $('[data-section-id="ap"]').length
+                ? $('[data-section-id="ap"]').eq(0).text().trim()
+                : $("button[data-tooltip*='website']").text().trim()
+                || $("button[data-item-id*='authority']").text().trim() || null,
             phone: phone || phoneAlt || null,
             temporarilyClosed,
             permanentlyClosed,
         };
-    }, PLACE_TITLE_SEL, jsonResult ? .addressParsed || {});
+    }, PLACE_TITLE_SEL, jsonResult?.addressParsed || {});
 };
 
 /**
@@ -226,7 +227,7 @@ module.exports.extractPageData = async({ page, jsonData }) => {
  *    page: Puppeteer.Page
  * }} options
  */
-module.exports.extractPopularTimes = async({ page }) => {
+module.exports.extractPopularTimes = async ({ page }) => {
     const output = {};
     // Include live popular times value
     const popularTimesLiveRawValue = await page.evaluate(() => {
@@ -244,7 +245,7 @@ module.exports.extractPopularTimes = async({ page }) => {
             const graphs = {};
             const days = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
             // Extract all days graphs
-            $('.section-popular-times-graph').each(function(i) {
+            $('.section-popular-times-graph').each(function (i) {
                 const day = days[i];
                 graphs[day] = [];
 
@@ -252,15 +253,15 @@ module.exports.extractPopularTimes = async({ page }) => {
                 let graphStartFromHour;
 
                 // Finds where x axis starts
-                $(this).find('.section-popular-times-label').each(function(labelIndex) {
+                $(this).find('.section-popular-times-label').each(function (labelIndex) {
                     if (graphStartFromHour) return;
                     const hourText = $(this).text().trim();
-                    graphStartFromHour = hourText.includes('p') ?
-                        12 + (parseInt(hourText, 10) - labelIndex) :
-                        parseInt(hourText, 10) - labelIndex;
+                    graphStartFromHour = hourText.includes('p')
+                        ? 12 + (parseInt(hourText, 10) - labelIndex)
+                        : parseInt(hourText, 10) - labelIndex;
                 });
                 // Finds values from y axis
-                $(this).find('.section-popular-times-bar').each(function(barIndex) {
+                $(this).find('.section-popular-times-bar').each(function (barIndex) {
                     // @ts-ignore
                     const occupancyMatch = $(this).attr('aria-label').match(/\d+(\s+)?%/);
                     if (occupancyMatch && occupancyMatch.length) {
@@ -284,16 +285,16 @@ module.exports.extractPopularTimes = async({ page }) => {
  *    page: Puppeteer.Page
  * }} options
  */
-module.exports.extractOpeningHours = async({ page }) => {
+module.exports.extractOpeningHours = async ({ page }) => {
     let result;
     const openingHoursSel = '.section-open-hours-container.section-open-hours-container-hoverable';
     const openingHoursSelAlt = '.section-open-hours-container.section-open-hours';
     const openingHoursSelAlt2 = '.section-open-hours-container';
     const openingHoursSelAlt3 = '[jsaction*=openhours]+[class*=open]';
-    const openingHoursEl = (await page.$(openingHoursSel)) ||
-        (await page.$(openingHoursSelAlt)) ||
-        (await page.$(openingHoursSelAlt2)) ||
-        (await page.$(openingHoursSelAlt3));
+    const openingHoursEl = (await page.$(openingHoursSel))
+        || (await page.$(openingHoursSelAlt))
+        || (await page.$(openingHoursSelAlt2))
+        || (await page.$(openingHoursSelAlt3));
     if (openingHoursEl) {
         const openingHoursText = await page.evaluate((openingHoursElem) => {
             return openingHoursElem.getAttribute('aria-label');
@@ -322,7 +323,7 @@ module.exports.extractOpeningHours = async({ page }) => {
  *    page: Puppeteer.Page
  * }} options
  */
-module.exports.extractPeopleAlsoSearch = async({ page }) => {
+module.exports.extractPeopleAlsoSearch = async ({ page }) => {
     const result = [];
     const peopleSearchContainer = await page.$('.section-carousel-scroll-container');
     if (peopleSearchContainer) {
@@ -360,7 +361,7 @@ module.exports.extractPeopleAlsoSearch = async({ page }) => {
  *    page: Puppeteer.Page
  * }} options
  */
-module.exports.extractAdditionalInfo = async({ page }) => {
+module.exports.extractAdditionalInfo = async ({ page }) => {
     let result;
     log.debug('[PLACE]: Scraping additional info.');
     await page.waitForSelector('button[jsaction*="pane.attributes.expand"]', { timeout: 5000 }).catch(() => {});
@@ -413,14 +414,10 @@ module.exports.extractAdditionalInfo = async({ page }) => {
         if (hotel_avail_amenities.length > 0) {
             const values = [];
             for (let name of hotel_avail_amenities) {
-                values.push({
-                    [name]: true
-                })
+                values.push({[name]: true})
             }
             for (let name of hotel_disabled_amenities) {
-                values.push({
-                    [name]: false
-                })
+                values.push({[name]: false})
             }
             return { "Amenities": values };
         } else {
@@ -473,15 +470,8 @@ const removePersonalDataFromReviews = (reviews, personalDataOptions) => {
  * }} options
  * @returns {Promise<Review[]>}
  */
-module.exports.extractReviews = async({
-    page,
-    reviewsCount,
-    maxReviews,
-    reviewsSort,
-    reviewsTranslation,
-    defaultReviewsJson,
-    personalDataOptions
-}) => {
+module.exports.extractReviews = async ({ page, reviewsCount,
+    maxReviews, reviewsSort, reviewsTranslation, defaultReviewsJson, personalDataOptions }) => {
 
     /** Returned at the last line @type {Review[]} */
     let reviews = [];
@@ -522,7 +512,7 @@ module.exports.extractReviews = async({
         // click the consent iframe, working with arrays so it never fails.
         // also if there's anything wrong with Same-Origin, just delete the modal contents
         // TODO: Why is this isolated in reviews?
-        await page.$$eval('#consent-bump iframe', async(frames) => {
+        await page.$$eval('#consent-bump iframe', async (frames) => {
             try {
                 frames.forEach((frame) => {
                     // @ts-ignore
@@ -603,7 +593,7 @@ module.exports.extractReviews = async({
 
             while (reviews.length < maxReviews) {
                 // Request in browser context to use proxy as in browser
-                const responseBody = await page.evaluate(async(url) => {
+                const responseBody = await page.evaluate(async (url) => {
                     const response = await fetch(url);
                     return response.text();
                 }, reviewUrl);
@@ -611,8 +601,8 @@ module.exports.extractReviews = async({
                 if (error) {
                     // This means that invalid response were returned
                     // I think can happen if the review count changes
-                    log.warning(`Invalid response returned for reviews. ` +
-                        `This might be caused by updated review count. The reviews should be scraped correctly. ${page.url()}`);
+                    log.warning(`Invalid response returned for reviews. `
+                    + `This might be caused by updated review count. The reviews should be scraped correctly. ${page.url()}`);
                     log.warning(error);
                     break;
                 }
@@ -638,7 +628,7 @@ module.exports.extractReviews = async({
  * maxImages: number,
  }} options
  */
-module.exports.extractImages = async({ page, maxImages }) => {
+module.exports.extractImages = async ({ page, maxImages }) => {
     if (!maxImages || maxImages === 0) {
         return undefined;
     }
@@ -662,7 +652,7 @@ module.exports.extractImages = async({ page, maxImages }) => {
 
         log.info(`[PLACE]: Infinite scroll for images started, url: ${page.url()}`);
 
-        for (;;) {
+        for (; ;) {
             // TODO: Debug infiniteScroll properly, it can get stuck in there sometimes, for now just adding a race
             await Promise.race([
                 infiniteScroll(page, pageBottom, '.section-scrollbox', 1),
