@@ -14,8 +14,9 @@ const { log, sleep } = Apify.utils;
  *    page: Puppeteer.Page
  * }} options
  */
-module.exports.extractPageData = async ({ page }) => {
+module.exports.extractPageData = async({ page }) => {
     let source = await page.content();
+    console.log('source=============>', source)
 
     return page.evaluate((placeTitleSel, source) => {
         const address = $('[data-section-id="ad"] .section-info-line').text().trim();
@@ -24,9 +25,9 @@ module.exports.extractPageData = async ({ page }) => {
         const secondaryAddressLine = $('[data-section-id="ad"] .section-info-secondary-text').text().replace('Located in:', '').trim();
         const secondaryAddressLineAlt = $("button[data-tooltip*='locatedin']").text().replace('Located in:', '').trim();
         const secondaryAddressLineAlt2 = $("button[data-item-id*='locatedin']").text().replace('Located in:', '').trim();
-        const phone = $('[data-section-id="pn0"].section-info-speak-numeral').length
-            ? $('[data-section-id="pn0"].section-info-speak-numeral').attr('data-href').replace('tel:', '')
-            : $("button[data-tooltip*='phone']").text().trim();
+        const phone = $('[data-section-id="pn0"].section-info-speak-numeral').length ?
+            $('[data-section-id="pn0"].section-info-speak-numeral').attr('data-href').replace('tel:', '') :
+            $("button[data-tooltip*='phone']").text().trim();
         const phoneAlt = $('button[data-item-id*=phone]').text().trim();
         let temporarilyClosed = false;
         let permanentlyClosed = false;
@@ -46,13 +47,13 @@ module.exports.extractPageData = async ({ page }) => {
             categoryName: $('[jsaction="pane.rating.category"]').text().trim(),
             address: address || addressAlt || addressAlt2 || null,
             locatedIn: secondaryAddressLine || secondaryAddressLineAlt || secondaryAddressLineAlt2 || null,
-            plusCode: $('[data-section-id="ol"] .widget-pane-link').text().trim()
-                || $("button[data-tooltip*='plus code']").text().trim()
-                || $("button[data-item-id*='oloc']").text().trim() || null,
-            website: $('[data-section-id="ap"]').length
-                ? $('[data-section-id="ap"]').eq('0').text().trim()
-                : $("button[data-tooltip*='website']").text().trim()
-                || $("button[data-item-id*='authority']").text().trim() || null,
+            plusCode: $('[data-section-id="ol"] .widget-pane-link').text().trim() ||
+                $("button[data-tooltip*='plus code']").text().trim() ||
+                $("button[data-item-id*='oloc']").text().trim() || null,
+            website: $('[data-section-id="ap"]').length ?
+                $('[data-section-id="ap"]').eq('0').text().trim() :
+                $("button[data-tooltip*='website']").text().trim() ||
+                $("button[data-item-id*='authority']").text().trim() || null,
             phone: phone || phoneAlt || null,
             temporarilyClosed,
             permanentlyClosed,
@@ -65,7 +66,7 @@ module.exports.extractPageData = async ({ page }) => {
  *    page: Puppeteer.Page
  * }} options
  */
-module.exports.extractPopularTimes = async ({ page }) => {
+module.exports.extractPopularTimes = async({ page }) => {
     const output = {};
     // Include live popular times value
     const popularTimesLiveRawValue = await page.evaluate(() => {
@@ -82,20 +83,20 @@ module.exports.extractPopularTimes = async ({ page }) => {
             const graphs = {};
             const days = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
             // Extract all days graphs
-            $('.section-popular-times-graph').each(function (i) {
+            $('.section-popular-times-graph').each(function(i) {
                 const day = days[i];
                 graphs[day] = [];
                 let graphStartFromHour;
                 // Finds where x axis starts
-                $(this).find('.section-popular-times-label').each(function (labelIndex) {
+                $(this).find('.section-popular-times-label').each(function(labelIndex) {
                     if (graphStartFromHour) return;
                     const hourText = $(this).text().trim();
-                    graphStartFromHour = hourText.includes('p')
-                        ? 12 + (parseInt(hourText, 10) - labelIndex)
-                        : parseInt(hourText, 10) - labelIndex;
+                    graphStartFromHour = hourText.includes('p') ?
+                        12 + (parseInt(hourText, 10) - labelIndex) :
+                        parseInt(hourText, 10) - labelIndex;
                 });
                 // Finds values from y axis
-                $(this).find('.section-popular-times-bar').each(function (barIndex) {
+                $(this).find('.section-popular-times-bar').each(function(barIndex) {
                     const occupancyMatch = $(this).attr('aria-label').match(/\d+(\s+)?%/);
                     if (occupancyMatch && occupancyMatch.length) {
                         const maybeHour = graphStartFromHour + barIndex;
@@ -116,8 +117,8 @@ module.exports.extractPopularTimes = async ({ page }) => {
  * @param {{
  *    page: Puppeteer.Page
  * }} options
-*/
-module.exports.extractOpeningHours = async ({ page }) => {
+ */
+module.exports.extractOpeningHours = async({ page }) => {
     let result;
     const openingHoursSel = '.section-open-hours-container.section-open-hours-container-hoverable';
     const openingHoursSelAlt = '.section-open-hours-container.section-open-hours';
@@ -147,8 +148,8 @@ module.exports.extractOpeningHours = async ({ page }) => {
  * @param {{
  *    page: Puppeteer.Page
  * }} options
-   */
-module.exports.extractPeopleAlsoSearch = async ({ page }) => {
+ */
+module.exports.extractPeopleAlsoSearch = async({ page }) => {
     let result = [];
     const peopleSearchContainer = await page.$('.section-carousel-scroll-container');
     if (peopleSearchContainer) {
@@ -182,10 +183,10 @@ module.exports.extractPeopleAlsoSearch = async ({ page }) => {
 
 /**
  * @param {{
-    *    page: Puppeteer.Page
-    * }} options
-      */
-module.exports.extractAdditionalInfo = async ({ page }) => {
+ *    page: Puppeteer.Page
+ * }} options
+ */
+module.exports.extractAdditionalInfo = async({ page }) => {
     let result;
     log.debug('[PLACE]: Scraping additional info.');
     const button = await page.$('button.section-editorial');
@@ -225,7 +226,7 @@ module.exports.extractAdditionalInfo = async ({ page }) => {
  *    reviewsSort: string,
  * }} options
  */
-module.exports.extractReviews = async ({ page, totalScore, maxReviews, reviewsSort }) => {
+module.exports.extractReviews = async({ page, totalScore, maxReviews, reviewsSort }) => {
     const result = {};
 
     const reviewSortOptions = {
@@ -261,7 +262,7 @@ module.exports.extractReviews = async ({ page, totalScore, maxReviews, reviewsSo
         // click the consent iframe, working with arrays so it never fails.
         // also if there's anything wrong with Same-Origin, just delete the modal contents
         // TODO: Why is this isolated in reviews?
-        await page.$$eval('#consent-bump iframe', async (frames) => {
+        await page.$$eval('#consent-bump iframe', async(frames) => {
             try {
                 frames.forEach((frame) => {
                     [...frame.contentDocument.querySelectorAll('#introAgreeButton')].forEach((s) => s.click());
@@ -277,7 +278,7 @@ module.exports.extractReviews = async ({ page, totalScore, maxReviews, reviewsSo
             await page.waitForSelector(reviewsButtonSel);
             await page.click(reviewsButtonSel);
             // Set up sort from newest
-            const sortPromise1 = async () => {
+            const sortPromise1 = async() => {
                 try {
                     await page.click('[class*=dropdown-icon]');
                     await sleep(1000);
@@ -289,7 +290,7 @@ module.exports.extractReviews = async ({ page, totalScore, maxReviews, reviewsSo
                     log.debug('[PLACE]: Can not sort reviews with 1 options!');
                 }
             };
-            const sortPromise2 = async () => {
+            const sortPromise2 = async() => {
                 try {
                     await page.click('button[data-value="Sort"]');
                     for (let i = 0; i < reviewSortOptions[reviewsSort]; i += 1) {
@@ -327,7 +328,7 @@ module.exports.extractReviews = async ({ page, totalScore, maxReviews, reviewsSo
 
             while (result.reviews.length < maxReviews) {
                 // Request in browser context to use proxy as in brows
-                const responseBody = await page.evaluate(async (url) => {
+                const responseBody = await page.evaluate(async(url) => {
                     const response = await fetch(url);
                     return await response.text();
                 }, reviewUrl);
@@ -360,7 +361,7 @@ module.exports.extractReviews = async ({ page, totalScore, maxReviews, reviewsSo
  * maxImages: number,
  }} options
  */
-module.exports.extractImages = async ({ page, maxImages }) => {
+module.exports.extractImages = async({ page, maxImages }) => {
     if (!maxImages || maxImages === 0) {
         return undefined;
     }
@@ -391,7 +392,7 @@ module.exports.extractImages = async ({ page, maxImages }) => {
             ]);
             imageUrls = await page.evaluate(() => {
                 const urls = [];
-                $('.gallery-image-high-res').each(function () {
+                $('.gallery-image-high-res').each(function() {
                     const urlMatch = $(this).attr('style').match(/url\("(.*)"\)/);
                     if (!urlMatch) return;
                     let imageUrl = urlMatch[1];
