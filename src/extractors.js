@@ -178,7 +178,9 @@ const parseReviewFromResponseBody = (responseBody, reviewsTranslation) => {
  * }} options
  */
 module.exports.extractPageData = async ({ page, jsonData }) => {
-    console.log('page===========', page, jsonData)
+    let source = await page.content();
+
+    console.log('page===========',source, page, jsonData)
     const jsonResult = parseJsonResult(jsonData, false);
     return page.evaluate((placeTitleSel, addressParsed) => {
         const address = $('[data-section-id="ad"] .section-info-line').text().trim();
