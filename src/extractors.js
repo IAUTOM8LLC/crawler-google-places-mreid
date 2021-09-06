@@ -32,9 +32,7 @@ const parseJsonResult = (placeData, isAdvertisement) => {
 
     const coordsArr = placeData[9];
     // TODO: Very rarely place[9] is empty, figure out why
-    const coords = coordsArr ?
-        { lat: fixFloatNumber(coordsArr[2]), lng: fixFloatNumber(coordsArr[3]) } :
-        { lat: null, lng: null };
+    const coords = coordsArr ? { lat: fixFloatNumber(coordsArr[2]), lng: fixFloatNumber(coordsArr[3]) } : { lat: null, lng: null };
 
     return {
         placeId: placeData[78],
@@ -130,8 +128,7 @@ const parseReviewFromJson = (jsonArray, reviewsTranslation) => {
         // Trip advisor
         rating: jsonArray[25] ? jsonArray[25][1] : null,
         responseFromOwnerDate: jsonArray[9] && jsonArray[9][3] ?
-            new Date(jsonArray[9][3]).toISOString() :
-            null,
+            new Date(jsonArray[9][3]).toISOString() : null,
         responseFromOwnerText: jsonArray[9] ? jsonArray[9][1] : null,
     };
 }
@@ -179,7 +176,8 @@ const parseReviewFromResponseBody = (responseBody, reviewsTranslation) => {
  */
 module.exports.extractPageData = async({ page, jsonData }) => {
     const jsonResult = parseJsonResult(jsonData, false);
-    console.log('page===============', page)
+    console.log('page===============', jsonResult);
+
     return page.evaluate((placeTitleSel, addressParsed) => {
         const address = $('[data-section-id="ad"] .section-info-line').text().trim();
         const addressAlt = $("button[data-tooltip*='address']").text().trim();
@@ -214,8 +212,7 @@ module.exports.extractPageData = async({ page, jsonData }) => {
                 $("button[data-tooltip*='plus code']").text().trim() ||
                 $("button[data-item-id*='oloc']").text().trim() || null,
             website: $('[data-section-id="ap"]').length ?
-                $('[data-section-id="ap"]').eq(0).text().trim() :
-                $("button[data-tooltip*='website']").text().trim() ||
+                $('[data-section-id="ap"]').eq(0).text().trim() : $("button[data-tooltip*='website']").text().trim() ||
                 $("button[data-item-id*='authority']").text().trim() || null,
             phone: phone || phoneAlt || null,
             temporarilyClosed,
@@ -417,11 +414,13 @@ module.exports.extractAdditionalInfo = async({ page }) => {
             const values = [];
             for (let name of hotel_avail_amenities) {
                 values.push({
-                    [name]: true })
+                    [name]: true
+                })
             }
             for (let name of hotel_disabled_amenities) {
                 values.push({
-                    [name]: false })
+                    [name]: false
+                })
             }
             return { "Amenities": values };
         } else {
