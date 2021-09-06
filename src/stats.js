@@ -1,33 +1,23 @@
 const Apify = require('apify');
 
-const typedefs = require('./typedefs'); // eslint-disable-line no-unused-vars
-
 const { utils: { log } } = Apify;
 
-module.exports = class Stats {
-    constructor() {
-        /** @type {typedefs.InnerStats} */
+exports.Stats = class Stats {
+    constructor(logInterval = 30) {
         this.stats = { failed: 0, ok: 0, outOfPolygon: 0, outOfPolygonCached: 0, places: 0, maps: 0 };
-        /** @type {typedefs.PlaceOutOfPolygon[]} */
-        this.placesOutOfPolygon = [];
-        this.statsKVKey = 'STATS';
-        this.placesOutOfPolygonKVKey = 'PLACES-OUT-OF-POLYGON';
-        this.persistBatchSize = 10000;
-    }
+        this.isLoaded = false;
 
-    /**
-     * @param {any} events
-     */
-    async initialize(events) {
-        const loadedStats = /** @type {typedefs.InnerStats | undefined} */ (await Apify.getValue(this.statsKVKey));
-        if (loadedStats) {
-            this.stats = loadedStats;
+        if (Number.isNaN(logInterval)) {
+            throw new Error('logInterval parameter is not number!');
         }
-        await this.loadPlacesOutsideOfPolygon();
 
-        events.on('persistState', async () => {
+        Apify.events.on('migrating', async () => {
             await this.saveStats();
         });
+
+        setInterval(async () => {
+            await this.saveStats();
+        }, logInterval * 1000);
     }
 
     async logInfo() {
@@ -40,9 +30,20 @@ module.exports = class Stats {
         log.info(`[STATS]: ${statsArray.join(' | ')}`);
     }
 
+    async loadInfo() {
+        // load old stats
+        const stats = await Apify.getValue('STATS');
+        if (stats) this.stats = stats;
+
+        // mark as loaded
+        this.isLoaded = true;
+    }
+
     async saveStats() {
-        await Apify.setValue(this.statsKVKey, this.stats);
-        await this.persitsPlacesOutsideOfPolygon();
+        if (!this.isLoaded) throw new Error('Cannot save before loading old data!');
+        await Apify.setValue('STATS', this.stats);
+        log.debug('[STATS]: Saved');
+
         await this.logInfo();
     }
 
@@ -69,31 +70,4 @@ module.exports = class Stats {
     outOfPolygonCached() {
         this.stats.outOfPolygonCached++;
     }
-
-    /** @param {typedefs.PlaceOutOfPolygon} placeInfo */
-    addOutOfPolygonPlace(placeInfo) {
-        this.placesOutOfPolygon.push(placeInfo);
-    }
-
-    async persitsPlacesOutsideOfPolygon() {
-        if (this.placesOutOfPolygon.length === 0) {
-            return;
-        }
-        for (let i = 0; i < this.placesOutOfPolygon.length; i += this.persistBatchSize) {
-            const slice = this.placesOutOfPolygon.slice(i, i + this.persistBatchSize);
-            await Apify.setValue(`${this.placesOutOfPolygonKVKey}-${i / this.persistBatchSize}`, slice);
-        }
-    }
-
-    async loadPlacesOutsideOfPolygon() {
-        for (let i = 0; ; i += this.persistBatchSize) {
-            const placesOutOfPolygonSlice =
-                /** @type {typedefs.PlaceOutOfPolygon[] | undefined} */
-                (await Apify.getValue(`${this.placesOutOfPolygonKVKey}-${i / this.persistBatchSize}`));
-            if (!placesOutOfPolygonSlice) {
-                return;
-            }
-            this.placesOutOfPolygon = this.placesOutOfPolygon.concat(placesOutOfPolygonSlice);
-        }
-    }
-}
+};
