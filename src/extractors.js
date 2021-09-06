@@ -182,7 +182,7 @@ module.exports.extractPageData = async ({ page, jsonData }) => {
 
     // console.log('page===========',source, page, jsonData)
     const jsonResult = parseJsonResult(jsonData, false);
-    return page.evaluate((placeTitleSel, addressParsed) => {
+    return page.evaluate((placeTitleSel, addressParsed, source) => {
         const address = $('[data-section-id="ad"] .section-info-line').text().trim();
         const addressAlt = $("button[data-tooltip*='address']").text().trim();
         const addressAlt2 = $("button[data-item-id*='address']").text().trim();
@@ -224,7 +224,7 @@ module.exports.extractPageData = async ({ page, jsonData }) => {
             temporarilyClosed,
             permanentlyClosed,
         };
-    }, PLACE_TITLE_SEL, jsonResult?.addressParsed || {});
+    }, PLACE_TITLE_SEL, jsonResult?.addressParsed || {}, source);
 };
 
 /**
